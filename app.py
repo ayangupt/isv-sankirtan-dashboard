@@ -1,5 +1,6 @@
 import os
 import datetime
+import json
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -62,21 +63,57 @@ st.markdown(spacing_tweaks, unsafe_allow_html=True)
 SERVICE_ACCOUNT_FILE = 'service_account.json'  # Or an environment variable/path
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
+# @st.cache_data
+# def fetch_data_from_sheets():
+#     creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+#     service = build('sheets', 'v4', credentials=creds)
+#     SPREADSHEET_ID = '1TLD5SBqvjAKF_JsWC9owSCF8P-ndLWqgZD8WuLprKR8'  # Replace with your real ID
+#     RANGE_NAME = 'Sheet1!A1:B10'
+#     sheet = service.spreadsheets()
+#     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+#     values = result.get('values', [])
+#     if values:
+#         headers = values[0]
+#         rows = values[1:]
+#         return pd.DataFrame(rows, columns=headers)
+#     else:
+#         return pd.DataFrame()
+
 @st.cache_data
 def fetch_data_from_sheets():
-    creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    # Build service_account_info from separate fields in secrets
+    service_account_info = {
+        "type": st.secrets["SERVICE_ACCOUNT"]["type"],
+        "project_id": st.secrets["SERVICE_ACCOUNT"]["project_id"],
+        "private_key_id": st.secrets["SERVICE_ACCOUNT"]["private_key_id"],
+        "private_key": st.secrets["SERVICE_ACCOUNT"]["private_key"],
+        "client_email": st.secrets["SERVICE_ACCOUNT"]["client_email"],
+        "client_id": st.secrets["SERVICE_ACCOUNT"]["client_id"],
+        "auth_uri": st.secrets["SERVICE_ACCOUNT"]["auth_uri"],
+        "token_uri": st.secrets["SERVICE_ACCOUNT"]["token_uri"],
+        "auth_provider_x509_cert_url": st.secrets["SERVICE_ACCOUNT"]["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": st.secrets["SERVICE_ACCOUNT"]["client_x509_cert_url"],
+        "universe_domain": st.secrets["SERVICE_ACCOUNT"]["universe_domain"]
+    }
+
+    # Create credentials from the loaded JSON
+    creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
     service = build('sheets', 'v4', credentials=creds)
+
+    # Example: fetch data from a specific spreadsheet & range
     SPREADSHEET_ID = '1TLD5SBqvjAKF_JsWC9owSCF8P-ndLWqgZD8WuLprKR8'  # Replace with your real ID
     RANGE_NAME = 'Sheet1!A1:B10'
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
     values = result.get('values', [])
+
     if values:
         headers = values[0]
         rows = values[1:]
         return pd.DataFrame(rows, columns=headers)
     else:
         return pd.DataFrame()
+
 
 def main():
     st.title("ISV Sankirtan Mission Control")
